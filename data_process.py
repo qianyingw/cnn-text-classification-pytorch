@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Feb 11 11:37:11 2019
-ref: github/GokuMohandas/practicalAI: notebooks/12_Embeddings.ipynb
-@author: qwang
-"""
+## -*- coding: utf-8 -*-
+#"""
+#Created on Mon Feb 11 11:37:11 2019
+#ref: github/GokuMohandas/practicalAI: notebooks/12_Embeddings.ipynb
+#@author: qwang
+#"""
 import os
 import re
 import csv
@@ -16,6 +16,7 @@ from collections import Counter
 import numpy as np
 import pandas as pd
 
+import random
 import torch
 from torch.utils.data import Dataset, DataLoader
 
@@ -25,17 +26,27 @@ from torch.utils.data import Dataset, DataLoader
 def set_seeds(seed, cuda):
     np.random.seed(seed)
     torch.manual_seed(seed)
+    random.seed(seed)
     if cuda:
         torch.cuda.manual_seed_all(seed)
-        
+
+# Random setting for DataLoader
+def _init_fn(seed):
+    np.random.seed(seed)
+ 
+# cudnn setting
+torch.backends.cudnn.enabled = False
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True    
+    
 # Creating directories
 def create_dirs(dirpath):
     if not os.path.exists(dirpath):
         os.makedirs(dirpath)
 
-#rob_name = 'randomisation'
+rob_name = 'randomisation'
 #rob_name = 'blinded'
-rob_name = 'ssz'
+#rob_name = 'ssz'
        
 # Arguments
 args = Namespace(
@@ -50,12 +61,13 @@ args = Namespace(
     val_size=0.10,
     test_size=0.10,
     cutoff=25, # token must appear at least <cutoff> times to be in SequenceVocabulary
-    num_epochs=15,
+    num_epochs=5,
     early_stopping_criteria=5,
     learning_rate=1e-3,
     batch_size=64,
     max_seq_len = 5000,
     num_filters=100,
+    filter_sizes=[6,6,6],
     embedding_dim=200,
     hidden_dim=100,
     dropout_p=0.5,
@@ -94,12 +106,12 @@ csv.field_size_limit(100000000)
 
 # Final raw data
 df = pd.read_csv("datafile/fulldata.csv", usecols=['text', 'label_random', 'label_blind', 'label_ssz'], sep = '\t', engine = 'python', encoding='utf-8')
-#df.loc[df.label_random==1, 'label'] = 'random'
-#df.loc[df.label_random==0, 'label'] = 'non-random'
+df.loc[df.label_random==1, 'label'] = 'random'
+df.loc[df.label_random==0, 'label'] = 'non-random'
 #df.loc[df.label_blind==1, 'label'] = 'blinded'
 #df.loc[df.label_blind==0, 'label'] = 'non-blinded'
-df.loc[df.label_ssz==1, 'label'] = 'ssz'
-df.loc[df.label_ssz==0, 'label'] = 'non-ssz'
+#df.loc[df.label_ssz==1, 'label'] = 'ssz'
+#df.loc[df.label_ssz==0, 'label'] = 'non-ssz'
 df.label.value_counts()
 
 # Split by label
@@ -410,7 +422,9 @@ class PapersDataset(Dataset):
     def generate_batches(self, batch_size, collate_fn, shuffle=True, drop_last=False, device="cpu"):
         dataloader = DataLoader(dataset=self, batch_size=batch_size,
                                 collate_fn=collate_fn, shuffle=shuffle, 
-                                drop_last=drop_last)
+                                drop_last=drop_last,
+                                num_workers = 0,
+                                worker_init_fn=_init_fn)
         for data_dict in dataloader:
             out_data_dict = {}
             for name, tensor in data_dict.items():

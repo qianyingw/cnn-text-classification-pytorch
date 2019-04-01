@@ -23,7 +23,6 @@ import torch.nn as nn
 import torch.optim as optim
 
 
-
 import data_process
 from data_process import df, split_df, args, Vocabulary, SequenceVocabulary, PapersVectorizer, PapersDataset
 import model
@@ -91,23 +90,7 @@ class Trainer(object):
             self.train_state['val_loss'][-1], self.train_state['val_acc'][-1], 
             self.train_state['val_sens'][-1], self.train_state['val_spec'][-1], 
             self.train_state['val_prec'][-1], self.train_state['val_f1'][-1]))
-        
-
-#        print ("[Epoch {0}] | LR: {1} | [Train LOSS]: {2:.2f} | [TRAIN ACC]: {3:.2f}% | [VAL LOSS]: {4:.2f} | [VAL ACC]: {5:.2f}%".format(
-#          self.train_state['epoch_index'], self.train_state['learning_rate'], 
-#            self.train_state['train_loss'][-1], self.train_state['train_acc'][-1], 
-#            self.train_state['val_loss'][-1], self.train_state['val_acc'][-1]))
-#
-#        print ("[Epoch]: {0} | [LR]: {1} | [TRAIN SENS]: {2:.2f}% | [TRAIN SPEC]: {3:.2f}% | [TRAIN PREC]: {4:.2f}% | [TRAIN F1]: {5:.2f}%".format(
-#          self.train_state['epoch_index'], self.train_state['learning_rate'], 
-#            self.train_state['train_sens'][-1], self.train_state['train_spec'][-1], 
-#            self.train_state['train_prec'][-1], self.train_state['train_f1'][-1]))
-#        
-#        print ("[Epoch]: {0} | [LR]: {1} | [VAL SENS]: {2:.2f}% | [VAL SPEC]: {3:.2f}% | [VAL PREC]: {4:.2f}% | [VAL F1]: {5:.2f}%".format(
-#          self.train_state['epoch_index'], self.train_state['learning_rate'], 
-#            self.train_state['val_sens'][-1], self.train_state['val_spec'][-1], 
-#            self.train_state['val_prec'][-1], self.train_state['val_f1'][-1]))
-        
+             
         # Save one model at least
         if self.train_state['epoch_index'] == 0:
             torch.save(self.model.state_dict(), self.train_state['model_filename'])
@@ -471,7 +454,7 @@ del(med_w2v)
 # Initialize model 
 model = PapersModel(embedding_dim=args.embedding_dim, 
                     num_embeddings=len(vectorizer.paper_vocab), 
-                    num_input_channels=args.embedding_dim, 
+                    num_input_channels=args.embedding_dim, filter_sizes=args.filter_sizes,
                     num_channels=args.num_filters, hidden_dim=args.hidden_dim, 
                     num_classes=len(vectorizer.label_vocab), 
                     dropout_p=args.dropout_p, pretrained_embeddings=embeddings, # pretrained_embeddings=None, 
@@ -482,7 +465,8 @@ print(model.named_modules)
 #%% Train
 trainer = Trainer(dataset=dataset, model=model, 
                   model_state_file=args.model_state_file, 
-                  save_dir=args.save_dir, device=args.device,
+                  save_dir=args.save_dir, 
+                  device=args.device,
                   shuffle=args.shuffle, num_epochs=args.num_epochs, 
                   batch_size=args.batch_size, learning_rate=args.learning_rate, 
                   early_stopping_criteria=args.early_stopping_criteria)
@@ -491,22 +475,24 @@ trainer = Trainer(dataset=dataset, model=model,
 start_time = time.time()
 trainer.run_train_loop()
 elapsed_time = time.time() - start_time
-print('Time elapsed: {0:.1f} minutes'.format(elapsed_time/60))
-
-#%% Plot performance
-trainer.plot_performance()
-
+#print('\nTime elapsed: {0:.1f} minutes\n'.format(elapsed_time/60))
 
 #%% Test performance
 trainer.run_test_loop()
-
 print ("[Test] loss: {0:.3f} | accuracy: {1:.2f}% | sensitivity: {2:.2f}% | specificity: {3:.2f}% | precision: {4:.2f}% | f1: {5:.2f}%".format(
          trainer.train_state['test_loss'], trainer.train_state['test_acc'], 
          trainer.train_state['test_sens'], trainer.train_state['test_spec'], 
          trainer.train_state['test_prec'], trainer.train_state['test_f1']))
 
 
+
+#%% Plot performance
+trainer.plot_performance()
+
+
+
 #%% Save all results
-trainer.save_train_state()
+#trainer.save_train_state()
 
-
+%reset -f
+import gc

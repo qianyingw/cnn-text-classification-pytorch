@@ -33,7 +33,7 @@ class PapersModel(nn.Module):
      
         # FC weights
         self.dropout = nn.Dropout(dropout_p)
-        self.fc1 = nn.Linear(num_channels*len(filter_sizes), hidden_dim)
+        self.fc1 = nn.Linear(num_channels*3, hidden_dim)
         self.fc2 = nn.Linear(hidden_dim, num_classes)
         
         if freeze_embeddings:
@@ -47,20 +47,11 @@ class PapersModel(nn.Module):
         # Rearrange input so num_channels is in dim 1 (N, C, L)
         if not channel_first:
             x_in = x_in.transpose(1, 2)
-                    
-#        # Conv outputs
-#        z1 = F.relu(self.conv[0](x_in))
-#        z1 = F.max_pool1d(z1, z1.size(2)).squeeze(2)
-#        z2 = F.relu(self.conv[1](x_in))
-#        z2 = F.max_pool1d(z2, z2.size(2)).squeeze(2)
-#        z3 = F.relu(self.conv[2](x_in))
-#        z3 = F.max_pool1d(z3, z3.size(2)).squeeze(2)       
-#        # Concat conv outputs
-#        z = torch.cat([z1, z2, z3], 1)
-        
+            
         # Conv outputs        
         z = [conv(x_in) for conv in self.conv]
         z = [F.max_pool1d(zz, zz.size(2)).squeeze(2) for zz in z]
+#        z = [F.relu(zz) for zz in z]
         
         # Concat conv outputs
         z = torch.cat(z, 1)
@@ -73,4 +64,3 @@ class PapersModel(nn.Module):
         if apply_softmax:
             y_pred = F.softmax(y_pred, dim=1)
         return y_pred
-
